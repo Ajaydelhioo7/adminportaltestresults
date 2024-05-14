@@ -1,3 +1,41 @@
+<?php
+session_start();
+
+require './database/db.php'; // Ensure the file is loaded
+
+// Check if the user is logged in as admin
+if (!isset($_SESSION['admin_id'])) {
+    header("Location: login_admin.php");
+    exit();
+}
+
+// Check if the form is submitted
+if (isset($_POST['submit'])) {
+    // retrieve the form data by using the element's name attributes value as key
+    $username = $_POST['username'];
+    $password = $_POST['password']; // Consider hashing the password before storing it
+    $email = $_POST['email'];
+    $phone = $_POST['phone'];
+
+    // prepare and bind
+    $stmt = $conn->prepare("INSERT INTO Admin (username, password, email, phone) VALUES (?, ?, ?, ?)");
+    $stmt->bind_param("ssss", $username, password_hash($password, PASSWORD_DEFAULT), $email, $phone);
+
+    // execute and check errors
+    if ($stmt->execute()) {
+        $_SESSION['message'] = "New admin registered successfully!";
+    } else {
+        $_SESSION['message'] = "Error: " . $stmt->error;
+    }
+
+    $stmt->close();
+    $conn->close();
+
+    header('Location: register_admin.php');
+    exit();
+}
+?>
+
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -28,6 +66,10 @@
 <?php include './includes/header.php'; ?>
 <div class="container">
     <h4>Register Admin</h4>
+    <?php if (isset($_SESSION['message'])): ?>
+        <p><?= $_SESSION['message']; ?></p>
+        <?php unset($_SESSION['message']); ?>
+    <?php endif; ?>
     <form action="register_admin.php" method="post">
         <div class="form-group">
             <label for="username">Username:</label>
@@ -49,33 +91,9 @@
     </form>
 </div>
 
-    <?php
-    // Include the database connection file
-    include './database/db.php';
-
-    // Check if the form is submitted
-    if (isset($_POST['submit'])) {
-        // retrieve the form data by using the element's name attributes value as key
-        $username = $_POST['username'];
-        $password = $_POST['password']; // Consider hashing the password before storing it
-        $email = $_POST['email'];
-        $phone = $_POST['phone'];
-
-        // prepare and bind
-        $stmt = $conn->prepare("INSERT INTO Admin (username, password, email, phone) VALUES (?, ?, ?, ?)");
-        $stmt->bind_param("ssss", $username, password_hash($password, PASSWORD_DEFAULT), $email, $phone);
-
-        // execute and check errors
-        if ($stmt->execute()) {
-            echo "New admin registered successfully!";
-        } else {
-            echo "Error: " . $stmt->error;
-        }
-
-        $stmt->close();
-        $conn->close();
-    }
-    ?>
-    <?php include('./includes/footer.php')?>
+<?php include('./includes/footer.php') ?>
+<script src="https://code.jquery.com/jquery-3.5.1.slim.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/@popperjs/core@2.9.2/dist/umd/popper.min.js"></script>
+<script src="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/js/bootstrap.min.js"></script>
 </body>
 </html>
