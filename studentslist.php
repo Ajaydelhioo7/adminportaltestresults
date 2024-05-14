@@ -9,7 +9,7 @@ if (!isset($_SESSION['admin_id'])) {
     exit();
 }
 
-// Handle Update or Delete action
+// Handle Update, Delete, or Add action
 if (isset($_POST['action'])) {
     if (!isset($_POST['csrf_token']) || $_POST['csrf_token'] !== $_SESSION['csrf_token']) {
         $_SESSION['message'] = "CSRF token mismatch.";
@@ -41,6 +41,20 @@ if (isset($_POST['action'])) {
             $_SESSION['message'] = "Error updating student: " . $stmt->error;
         }
         $stmt->close();
+    } elseif ($_POST['action'] == 'add') {
+        $rollno = $_POST['rollno'];
+        $name = $_POST['name'];
+        $batch = $_POST['batch'];
+        $email = $_POST['email'];
+        $phone = $_POST['phone'];
+        $stmt = $conn->prepare("INSERT INTO Students (rollno, name, batch, email, phone) VALUES (?, ?, ?, ?, ?)");
+        $stmt->bind_param("sssss", $rollno, $name, $batch, $email, $phone);
+        if ($stmt->execute()) {
+            $_SESSION['message'] = "Student added successfully!";
+        } else {
+            $_SESSION['message'] = "Error adding student: " . $stmt->error;
+        }
+        $stmt->close();
     }
     header('Location: studentslist.php');
     exit();
@@ -61,6 +75,7 @@ $_SESSION['csrf_token'] = bin2hex(random_bytes(32));
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Edit Students</title>
+    <link rel="stylesheet" href="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/css/bootstrap.min.css">
     <link rel="stylesheet" href="../css/style.css">
 </head>
 <body>
@@ -71,7 +86,7 @@ $_SESSION['csrf_token'] = bin2hex(random_bytes(32));
 <?php endif; ?>
 
 <div class="container mt-5">
-    <h4>Edit Students</h4>
+    <button type="button" class="btn btn-success mb-3" data-toggle="modal" data-target="#newStudentModal">Add New Student</button>
     <table class="table table-bordered">
         <thead>
             <tr>
@@ -107,7 +122,50 @@ $_SESSION['csrf_token'] = bin2hex(random_bytes(32));
     </table>
 </div>
 
+<!-- New Student Modal -->
+<div class="modal fade" id="newStudentModal" tabindex="-1" aria-labelledby="newStudentModalLabel" aria-hidden="true">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="newStudentModalLabel">Add New Student</h5>
+                <button type="button" class="close" data-dismiss="modal" aria-label="Close">
+                    <span aria-hidden="true">&times;</span>
+                </button>
+            </div>
+            <div class="modal-body">
+                <form action="studentslist.php" method="post">
+                    <div class="form-group">
+                        <label for="rollno">Roll No</label>
+                        <input type="text" class="form-control" name="rollno" required>
+                    </div>
+                    <div class="form-group">
+                        <label for="name">Name</label>
+                        <input type="text" class="form-control" name="name" required>
+                    </div>
+                    <div class="form-group">
+                        <label for="batch">Batch</label>
+                        <input type="text" class="form-control" name="batch" required>
+                    </div>
+                    <div class="form-group">
+                        <label for="email">Email</label>
+                        <input type="email" class="form-control" name="email" required>
+                    </div>
+                    <div class="form-group">
+                        <label for="phone">Phone</label>
+                        <input type="text" class="form-control" name="phone" required>
+                    </div>
+                    <input type="hidden" name="csrf_token" value="<?= $_SESSION['csrf_token']; ?>">
+                    <button type="submit" name="action" value="add" class="btn btn-success">Add Student</button>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+
 <?php include './includes/footer.php'; ?>
+<script src="https://code.jquery.com/jquery-3.5.1.slim.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/@popperjs/core@2.9.2/dist/umd/popper.min.js"></script>
+<script src="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/js/bootstrap.min.js"></script>
 </body>
 </html>
 

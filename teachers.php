@@ -9,7 +9,7 @@ if (!isset($_SESSION['admin_id'])) {
     exit();
 }
 
-// Handle Update or Delete action
+// Handle Update, Delete, or Add action
 if (isset($_POST['action'])) {
     if (!isset($_POST['csrf_token']) || $_POST['csrf_token'] !== $_SESSION['csrf_token']) {
         $_SESSION['message'] = "CSRF token mismatch.";
@@ -32,12 +32,27 @@ if (isset($_POST['action'])) {
         $password = $_POST['password'];
         $email = $_POST['email'];
         $phone = $_POST['phone'];
+        $hashed_password = password_hash($password, PASSWORD_DEFAULT);
         $stmt = $conn->prepare("UPDATE Teachers SET username = ?, password = ?, email = ?, phone = ? WHERE id = ?");
-        $stmt->bind_param("ssssi", $username, $password, $email, $phone, $teacher_id);
+        $stmt->bind_param("ssssi", $username, $hashed_password, $email, $phone, $teacher_id);
         if ($stmt->execute()) {
             $_SESSION['message'] = "Teacher updated successfully!";
         } else {
             $_SESSION['message'] = "Error updating teacher: " . $stmt->error;
+        }
+        $stmt->close();
+    } elseif ($_POST['action'] == 'add') {
+        $username = $_POST['username'];
+        $password = $_POST['password'];
+        $email = $_POST['email'];
+        $phone = $_POST['phone'];
+        $hashed_password = password_hash($password, PASSWORD_DEFAULT);
+        $stmt = $conn->prepare("INSERT INTO Teachers (username, password, email, phone) VALUES (?, ?, ?, ?)");
+        $stmt->bind_param("ssss", $username, $hashed_password, $email, $phone);
+        if ($stmt->execute()) {
+            $_SESSION['message'] = "Teacher added successfully!";
+        } else {
+            $_SESSION['message'] = "Error adding teacher: " . $stmt->error;
         }
         $stmt->close();
     }
@@ -60,6 +75,7 @@ $_SESSION['csrf_token'] = bin2hex(random_bytes(32));
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Edit Teachers</title>
+    <link rel="stylesheet" href="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/css/bootstrap.min.css">
     <link rel="stylesheet" href="../css/style.css">
 </head>
 <body>
@@ -70,7 +86,7 @@ $_SESSION['csrf_token'] = bin2hex(random_bytes(32));
 <?php endif; ?>
 
 <div class="container mt-5">
-    <h4>Edit Teachers</h4>
+    <button type="button" class="btn btn-success mb-3" data-toggle="modal" data-target="#newTeacherModal">Add New Teacher</button>
     <table class="table table-bordered">
         <thead>
             <tr>
@@ -88,7 +104,7 @@ $_SESSION['csrf_token'] = bin2hex(random_bytes(32));
                 <form action="teachers.php" method="post">
                     <td><?= htmlspecialchars($teacher['id']); ?></td>
                     <td><input type="text" name="username" value="<?= htmlspecialchars($teacher['username']); ?>" class="form-control"></td>
-                    <td><input type="text" name="password" value="<?= htmlspecialchars($teacher['password']); ?>" class="form-control"></td>
+                    <td><input type="password" name="password" value="" placeholder="New password" class="form-control"></td>
                     <td><input type="email" name="email" value="<?= htmlspecialchars($teacher['email']); ?>" class="form-control"></td>
                     <td><input type="text" name="phone" value="<?= htmlspecialchars($teacher['phone']); ?>" class="form-control"></td>
                     <td>
@@ -104,7 +120,46 @@ $_SESSION['csrf_token'] = bin2hex(random_bytes(32));
     </table>
 </div>
 
+<!-- New Teacher Modal -->
+<div class="modal fade" id="newTeacherModal" tabindex="-1" aria-labelledby="newTeacherModalLabel" aria-hidden="true">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="newTeacherModalLabel">Add New Teacher</h5>
+                <button type="button" class="close" data-dismiss="modal" aria-label="Close">
+                    <span aria-hidden="true">&times;</span>
+                </button>
+            </div>
+            <div class="modal-body">
+                <form action="teachers.php" method="post">
+                    <div class="form-group">
+                        <label for="username">Username</label>
+                        <input type="text" class="form-control" name="username" required>
+                    </div>
+                    <div class="form-group">
+                        <label for="password">Password</label>
+                        <input type="password" class="form-control" name="password" required>
+                    </div>
+                    <div class="form-group">
+                        <label for="email">Email</label>
+                        <input type="email" class="form-control" name="email" required>
+                    </div>
+                    <div class="form-group">
+                        <label for="phone">Phone</label>
+                        <input type="text" class="form-control" name="phone" required>
+                    </div>
+                    <input type="hidden" name="csrf_token" value="<?= $_SESSION['csrf_token']; ?>">
+                    <button type="submit" name="action" value="add" class="btn btn-success">Add Teacher</button>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+
 <?php include './includes/footer.php'; ?>
+<script src="https://code.jquery.com/jquery-3.5.1.slim.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/@popperjs/core@2.9.2/dist/umd/popper.min.js"></script>
+<script src="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/js/bootstrap.min.js"></script>
 </body>
 </html>
 
